@@ -1,0 +1,157 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum Role {
+  admin
+  pemilik
+}
+
+enum StudentStatus {
+  calon
+  terdaftar
+  aktif
+  batal
+}
+
+enum ProgramCategory {
+  offline
+  online
+  paket
+}
+
+enum PaymentStatus {
+  lunas
+  belum
+}
+
+enum TransactionType {
+  masuk
+  keluar
+}
+
+// ==========================================
+// MODELS / TABLES
+// ==========================================
+
+// 1. Users_DB
+model User {
+  userId       String           @id @default(uuid()) @map("user_id") @db.Uuid
+  fullName     String           @map("full_name")
+  email        String           @unique @map("email")
+  passwordHash String           @map("password_hash")
+  role         Role             @default(admin) @map("role")
+
+  managedStudents Student[]     @relation("ManagedStudents")
+  recordedTx      CashbookRefund[] @relation("RecordedTransactions")
+
+  @@map("users_db")
+}
+
+// 2. Student_DB
+model Student {
+  studentId       String          @id @map("student_id")
+  fullName        String          @map("full_name")
+  phone           String          @map("phone")
+  status          StudentStatus   @default(calon) @map("status")
+  hasPretest      Boolean         @default(false) @map("has_pretest")
+  recommendedHsk  String?         @map("recommended_hsk") // HSK 1 - HSK 4
+  registeredAt    DateTime        @default(now()) @map("registered_at") @db.Date
+
+  // Relasi ke User pengelola
+  managedById     String?         @map("managed_by") @db.Uuid
+  managedBy       User?           @relation("ManagedStudents", fields: [managedById], references: [userId])
+
+  // Relasi Child
+  pretest         PretestAi?
+  enrolledClasses Enrollment[]
+  cashbookTx      CashbookRefund[]
+
+  @@map("student_db")
+}
+
+// 3. Pretest_AI_DB
+model PretestAi {
+  pretestId       String          @id @default(uuid()) @map("pretest_id") @db.Uuid
+  studentId       String          @unique @map("student_id") // 1 student max 1 pretest
+  listeningScore  Int             @map("listening_score") // 0-100
+  readingScore    Int             @map("reading_score")   // 0-100
+  vocabScore      Int             @map("vocab_score")     // 0-100
+  predictedLevel  String          @map("predicted_level") 
+  confidenceScore Float           @map("confidence_score") 
+  evaluatedAt     DateTime        @default(now()) @map("evaluated_at")
+
+  student         Student         @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+
+  @@map("pretest_ai_db")
+}
+
+// 4. Program_Class_DB
+model ProgramClass {
+  classId        String          @id @map("class_id") 
+  programCode    String          @map("program_code") 
+  programName    String          @map("program_name")
+  category       ProgramCategory @map("category")
+  hskLevel       String          @map("hsk_level")
+  priceIdr       Decimal         @map("price_idr") @db.Decimal(12, 2)
+  teacherLaoshi  String          @map("teacher_laoshi")
+  scheduleSlot   String          @map("schedule_slot")
+  startDayRule   Int             @map("start_day_rule") 
+  quotaMax       Int             @map("quota_max")
+  faqVectors     Json?           @map("faq_vectors")
+
+  enrollments    Enrollment[]
+
+  @@map("program_class_db")
+}
+
+// 5. Enrollment_DB
+model Enrollment {
+  enrollmentId    String          @id @default(uuid()) @map("enrollment_id") @db.Uuid
+  studentId       String          @map("student_id")
+  classId         String          @map("class_id")
+  scheduleSlot    String          @map("schedule_slot")
+  conflictChecked Boolean         @default(false) @map("conflict_checked")
+  quotaVerified   Boolean         @default(false) @map("quota_verified")
+  paymentStatus   PaymentStatus   @default(belum) @map("payment_status")
+  paidAmountIdr   Decimal         @default(0) @map("paid_amount_idr") @db.Decimal(12, 2)
+  enrolledAt      DateTime        @default(now()) @map("enrolled_at")
+
+  student         Student         @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+  programClass    ProgramClass    @relation(fields: [classId], references: [classId], onDelete: Cascade)
+
+  @@map("enrollment_db")
+}
+
+// 6. Cashbook_Refund_DB
+model CashbookRefund {
+  txId            String          @id @map("tx_id")
+  studentId       String?         @map("student_id") 
+  recordedBy      String          @map("recorded_by") @db.Uuid
+  txDate          DateTime        @default(now()) @map("tx_date") @db.Date
+  txType          TransactionType @map("tx_type") 
+  amountIdr       Decimal         @map("amount_idr") @db.Decimal(12, 2)
+  refundId        String?         @map("refund_id") 
+  hadPretestFlag  Boolean         @default(false) @map("had_pretest_flag")
+  refundReason    String?         @map("refund_reason")
+  noRefundPolicy  Boolean         @default(true) @map("no_refund_policy")
+
+  student         Student?        @relation(fields: [studentId], references: [studentId])
+  recorder        User            @relation("RecordedTransactions", fields: [recordedBy], references: [userId])
+
+  @@map("cashbook_refund_db")
+}

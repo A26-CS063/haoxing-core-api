@@ -1,0 +1,10 @@
+node_modules
+dist
+generated
+package-lock.json
+skills-lock.json
+.env
+.agents
+.claude
+.windsurf
+docs/extracted_plan.txt
