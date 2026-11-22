@@ -1,34 +1,34 @@
 # Haoxing Core API
 
-Backend RESTful API untuk Sistem Manajemen Lembaga Kursus Bahasa Mandarin **Haoxing Mandarin Center** (Capstone Project A26-CS063).
+Centralized backend RESTful API powering administrative workflows, intelligent student placement assessments, class scheduling, and financial management for **Haoxing Mandarin Center** (Capstone Project A26-CS063).
 
 ---
 
-## 1. Tech Stack Utama
+## 1. Core Tech Stack
 
-| Layer | Teknologi | Deskripsi |
+| Layer | Technology | Description |
 | :--- | :--- | :--- |
 | **Runtime & Language** | Node.js (v22 / LTS), TypeScript 5.8 | Native ES Modules (`"type": "module"`), Strict Mode, Zero `any`. |
-| **Framework** | Express.js 5 | Minimalist web framework dengan modular routing. |
-| **Database & ORM** | Neon Serverless PostgreSQL, Prisma ORM v7 | Database cloud serverless dengan driver adapter `@prisma/adapter-pg`. |
-| **Cache & Rate Limit** | Upstash Redis, ioredis, express-rate-limit | Rate limiting terdistribusi dengan auto-fallback in-memory store. |
-| **Autentikasi & Keamanan** | JWT, bcrypt, Helmet, CORS | Access token (1 hari) & refresh token (7 hari) dengan RBAC (`admin`, `pemilik`). |
-| **Dokumentasi API** | Swagger UI Express, OpenAPI 3.0 | Tersedia interaktif di endpoint `/api-docs`. |
-| **Testing & Coverage** | Vitest, Supertest, @vitest/coverage-v8 | Unit dan integration test otomatis dengan V8 coverage engine. |
-| **Code Quality** | ESLint 10, Prettier | Standar penulisan seragam dan konsisten. |
-| **CI/CD** | GitHub Actions | Otomasi gerbang kualitas pada branch `staging` dan `main`. |
+| **Framework** | Express.js 5 | Lightweight web framework with modular routing. |
+| **Database & ORM** | Neon Serverless PostgreSQL, Prisma ORM v7 | Cloud database with `@prisma/adapter-pg` driver adapter. |
+| **Cache & Rate Limiting** | Upstash Redis, ioredis, express-rate-limit | Distributed rate limiting with automatic in-memory fallback. |
+| **Authentication & Security** | JWT, bcrypt, Helmet, CORS | Access token (1 day), refresh token (7 days), and role-based access control (`admin`, `pemilik`). |
+| **API Documentation** | Swagger UI Express, OpenAPI 3.0 | Documented endpoints accessible at `/api-docs`. |
+| **Testing & Coverage** | Vitest, Supertest, @vitest/coverage-v8 | Automated unit and integration testing with V8 coverage engine. |
+| **Code Quality** | ESLint 10, Prettier | Consistent code styling and linting standards. |
+| **CI/CD** | GitHub Actions | Automated quality gates for `staging` and `main` branches. |
 
 ---
 
-## 2. Arsitektur Sistem & Alur Integrasi AI
+## 2. System Architecture & AI Integration
 
-Berikut adalah visualisasi arsitektur end-to-end yang menghubungkan Frontend Client, Backend API, Database, Caching, serta integrasi Layanan AI (Pretest Evaluation & HSK Recommendation):
+The following architecture diagram illustrates the end-to-end flow connecting Client Applications, Backend Core API, Primary Database, Distributed Cache, and the AI Evaluation Service:
 
 ```mermaid
 flowchart TD
     subgraph Client["Frontend Layer (Client Applications)"]
-        FE_Admin["Web Admin / Owner Dashboard (Portal Manajemen)"]
-        FE_Student["Student Pretest & Registration UI (Portal Siswa)"]
+        FE_Admin["Web Admin / Owner Dashboard (Management Portal)"]
+        FE_Student["Student Registration & Assessment UI"]
     end
 
     subgraph Security["Security & Middleware Layer"]
@@ -78,86 +78,79 @@ flowchart TD
     MOD_Cashbook -->|"Query Transaction Logs"| DB_Postgres
 
     %% AI Integration Flow
-    FE_Student -->|"1. Submit Jawaban Pretest"| MOD_Pretest
-    MOD_Pretest -->|"2. Forward Data Jawaban / Teks"| AI_Model
-    AI_Model -->|"3. Output: Skor Listening, Reading, Vocab & Prediksi HSK"| MOD_Pretest
-    MOD_Pretest -->|"4. Simpan Hasil Penilaian (pretest_ai_db)"| DB_Postgres
-    MOD_Class -->|"Pencarian Semantik FAQ"| AI_Vector
-    MOD_Pretest -->|"5. Kirim Rekomendasi Level & Kelas ke UI"| FE_Student
+    FE_Student -->|"Submit Pretest Assessment"| MOD_Pretest
+    MOD_Pretest -->|"Forward Raw Responses"| AI_Model
+    AI_Model -->|"Return Category Scores & HSK Level"| MOD_Pretest
+    MOD_Pretest -->|"Store Assessment (pretest_ai_db)"| DB_Postgres
+    MOD_Class -->|"Semantic Search / Class Match"| AI_Vector
+    MOD_Pretest -->|"Deliver Level Recommendation"| FE_Student
 ```
-
-### Penjelasan Alur Integrasi AI (Pretest Assessment Flow):
-1. **Pengerjaan Pretest:** Calon siswa menyelesaikan modul tes kemampuan (listening, reading, dan vocabulary) di frontend.
-2. **Evaluasi Otomatis via AI:** Backend meneruskan payload jawaban ke Layanan AI untuk dinilai secara otomatis.
-3. **Prediksi Level HSK:** AI menghasilkan skor objektif beserta level HSK yang direkomendasikan (`predicted_level`) dan tingkat keyakinan (`confidence_score`).
-4. **Persistensi Data:** Hasil penilaian disimpan ke tabel `pretest_ai_db` dan langsung terhubung dengan profil siswa di `student_db`.
-5. **Rekomendasi Kelas:** Backend mengembalikan rekomendasi kelas yang sesuai kepada siswa dan staf admin untuk proses pendaftaran (*enrollment*).
 
 ---
 
-## 3. Struktur Direktori Proyek
+## 3. Project Directory Structure
 
-Arsitektur kode menggunakan pola **Feature-Based Modular Architecture**:
+This project follows a **Feature-Based Modular Architecture**:
 
 ```text
 haoxing-core-api/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml             # Otomasi pengujian CI GitHub Actions
+│       └── ci.yml             # GitHub Actions CI pipeline
 ├── docs/
-│   ├── code-conventions.md    # Pedoman standar koding & testing
-│   ├── git-workflow.md        # Pedoman percabangan, PR, & commit message
-│   ├── erd-db-schema.png      # Diagram ERD Database
-│   └── flow-system.png        # Diagram alur sistem bisnis
+│   ├── code-conventions.md    # Coding and testing conventions guide
+│   ├── git-workflow.md        # Branching, PR, and commit message guide
+│   ├── erd-db-schema.png      # Entity Relationship Diagram
+│   └── flow-system.png        # Business workflow diagram
 ├── prisma/
-│   ├── schema.prisma          # Definisi model data Prisma ORM
-│   ├── seed.ts                # Data awal akun Admin, Pemilik, Kelas, & Siswa
-│   └── migrations/            # Histori migrasi skema database
+│   ├── schema.prisma          # Prisma ORM data models
+│   ├── seed.ts                # Initial seeder for Admin, Owner, Classes, and Students
+│   └── migrations/            # Database schema migration history
 ├── src/
-│   ├── config/                # Konfigurasi database, env, redis, swagger
-│   ├── middlewares/           # Middleware autentikasi, rate limit, error handler
-│   ├── modules/               # Modul fitur bisnis mandiri
-│   │   ├── auth/              # Fitur login, refresh token, ganti password, profile
-│   │   │   ├── __tests__/     # Unit test schema, service, dan integration test API
+│   ├── config/                # Database, environment, Redis, and Swagger configurations
+│   ├── middlewares/           # Authentication, rate limiting, and error handling middlewares
+│   ├── modules/               # Feature-based business modules
+│   │   ├── auth/              # Authentication, refresh token, password, and profile
+│   │   │   ├── __tests__/     # Schema, service, and API integration tests
 │   │   │   ├── auth.schema.ts
 │   │   │   ├── auth.service.ts
 │   │   │   ├── auth.controller.ts
 │   │   │   └── auth.routes.ts
-│   │   └── students/          # Modul manajemen siswa (CRUD)
-│   ├── types/                 # Definisi tipe data TypeScript global
-│   ├── app.ts                 # Inisialisasi Express app
-│   └── server.ts              # Entry point bootstrap server
-├── .env.example               # Template environment variable
-├── eslint.config.js           # Konfigurasi ESLint flat config
-├── package.json               # Daftar dependensi dan script npm
-├── tsconfig.json              # Konfigurasi TypeScript compiler
-└── vitest.config.ts           # Konfigurasi test runner Vitest
+│   │   └── students/          # Student management module (CRUD)
+│   ├── types/                 # Global TypeScript definitions
+│   ├── app.ts                 # Express application initialization
+│   └── server.ts              # Server bootstrap entry point
+├── .env.example               # Environment variables template
+├── eslint.config.js           # ESLint flat configuration
+├── package.json               # Dependencies and npm scripts
+├── tsconfig.json              # TypeScript compiler configuration
+└── vitest.config.ts           # Vitest test runner configuration
 ```
 
 ---
 
-## 4. Panduan Instalasi & Menjalankan Proyek
+## 4. Installation & Setup
 
-### Prasyarat
-- Node.js versi 20 atau 22 (LTS)
-- Akun database Neon PostgreSQL
-- Akun Upstash Redis (opsional, sistem memiliki in-memory fallback)
+### Prerequisites
+- Node.js version 20 or 22 (LTS)
+- Neon PostgreSQL database instance
+- Upstash Redis instance (optional, system falls back to in-memory store)
 
-### Langkah Setup
+### Setup Steps
 
-1. **Clone Repositori:**
+1. **Clone Repository:**
    ```bash
-   git clone <URL_REPOSITORY>
+   git clone <REPOSITORY_URL>
    cd haoxing-core-api
    ```
 
-2. **Instal Dependensi:**
+2. **Install Dependencies:**
    ```bash
    npm install --legacy-peer-deps
    ```
 
-3. **Konfigurasi Environment Variable:**
-   Salin file `.env.example` menjadi `.env`, lalu isi kredensial yang sesuai:
+3. **Configure Environment Variables:**
+   Copy `.env.example` to `.env` and fill in the required credentials:
    ```bash
    cp .env.example .env
    ```
@@ -167,59 +160,59 @@ haoxing-core-api/
    npm run prisma:generate
    ```
 
-5. **Jalankan Migrasi Database:**
+5. **Run Database Migrations:**
    ```bash
    npm run prisma:migrate
    ```
 
-6. **Jalankan Database Seeder (Membuat Akun Default):**
+6. **Seed Initial Data:**
    ```bash
    npm run prisma:seed
    ```
-   *Akun bawaan hasil seeder:*
+   *Default seeded accounts:*
    - **Admin:** `admin@haoxing.id` | Password: `haoxing2026`
-   - **Pemilik:** `pemilik@haoxing.id` | Password: `haoxing2026`
+   - **Owner:** `pemilik@haoxing.id` | Password: `haoxing2026`
 
-7. **Jalankan Server Development:**
+7. **Start Development Server:**
    ```bash
    npm run dev
    ```
-   Server aktif di `http://localhost:3000`.
+   The server will run at `http://localhost:3000`.
 
 ---
 
-## 5. Daftar Perintah NPM (Scripts)
+## 5. Available NPM Scripts
 
-| Perintah | Deskripsi |
+| Script | Description |
 | :--- | :--- |
-| `npm run dev` | Menjalankan server lokal dengan hot-reload (`tsx watch`). |
-| `npm run build` | Melakukan kompilasi TypeScript ke folder `dist/`. |
-| `npm run start` | Menjalankan build produksi dari folder `dist/`. |
-| `npm run lint` | Memeriksa kepatuhan aturan koding dengan ESLint. |
-| `npm run lint:fix` | Memperbaiki error linter yang dapat diselesaikan otomatis. |
-| `npm run format` | Merapikan format kode secara otomatis menggunakan Prettier. |
-| `npm run format:check` | Memeriksa format kode tanpa melakukan modifikasi file. |
-| `npm run test` | Menjalankan seluruh pengujian unit dan integrasi dengan Vitest. |
-| `npm run test:watch` | Menjalankan Vitest dalam mode interaktif. |
-| `npm run test:coverage` | Menjalankan pengujian dan menampilkan persentase cakupan kode. |
-| `npm run prisma:migrate` | Menjalankan migrasi database ke cloud Neon. |
-| `npm run prisma:generate` | Memperbarui Prisma Client lokal. |
-| `npm run prisma:seed` | Mengisi data awal ke database. |
-| `npm run prisma:studio` | Membuka antarmuka grafis data browser Prisma Studio. |
+| `npm run dev` | Starts local server with hot-reload (`tsx watch`). |
+| `npm run build` | Compiles TypeScript into the `dist/` directory. |
+| `npm run start` | Runs production build from `dist/`. |
+| `npm run lint` | Runs ESLint check across all files. |
+| `npm run lint:fix` | Automatically fixes autofixable ESLint issues. |
+| `npm run format` | Automatically formats codebase using Prettier. |
+| `npm run format:check` | Checks code formatting without modifying files. |
+| `npm run test` | Runs all unit and integration tests using Vitest. |
+| `npm run test:watch` | Runs Vitest in interactive watch mode. |
+| `npm run test:coverage` | Runs test suite and outputs code coverage report. |
+| `npm run prisma:migrate` | Applies database migrations to Neon PostgreSQL. |
+| `npm run prisma:generate` | Regenerates local Prisma Client. |
+| `npm run prisma:seed` | Populates database with initial seed data. |
+| `npm run prisma:studio` | Opens Prisma Studio visual database browser. |
 
 ---
 
-## 6. Dokumentasi API Interaktif
+## 6. API Documentation
 
-Dokumentasi lengkap seluruh endpoint API, skema request/response, dan mekanisme autentikasi Bearer Token dapat diakses langsung melalui browser:
+API endpoints, request/response schemas, and Bearer Token authentication are documented and accessible via:
 
 - **Swagger UI:** `http://localhost:3000/api-docs`
 - **Health Check:** `http://localhost:3000/api/v1/health`
 
 ---
 
-## 7. Alur Kerja Git & Standar Kolaborasi
+## 7. Git Workflow & Collaboration
 
-Seluruh kontributor wajib membaca dan mematuhi panduan berikut sebelum berkontribusi:
-- **[docs/code-conventions.md](./docs/code-conventions.md)**: Standar arsitektur, konvensi penamaan, aturan Zero `any`, dan panduan testing 3 layer per modul.
-- **[docs/git-workflow.md](./docs/git-workflow.md)**: Alur percabangan 2 branch utama (`main` untuk produksi, `staging` untuk integrasi), format komit Conventional Commits, dan checklist Pull Request.
+All contributors must read and follow the collaboration guidelines:
+- **[docs/code-conventions.md](./docs/code-conventions.md)**: Coding standards, naming conventions, Zero `any` rule, and 3-layer testing strategy.
+- **[docs/git-workflow.md](./docs/git-workflow.md)**: Branching strategy (`main` for production, `staging` for integration), Conventional Commits format, and PR checklist.
